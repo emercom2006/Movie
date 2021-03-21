@@ -1,38 +1,40 @@
 package main
 
 import (
+	"awesomeProject/GoArchitecture/gb-go-architecture-master/Movie/Movie/server"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const Addr = ":8081"
 
 func main() {
+
+	//инициализируем подключение к базе данных
+	err := server.InitDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/movies", movieListHandler)
 	http.HandleFunc("/movies/", movieListHandlerId)
 	log.Printf("Starting on port %s", Addr)
 	log.Fatal(http.ListenAndServe(Addr, nil))
 }
 
-type Movie struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	Poster   string `json:"poster"`
-	MovieUrl string `json:"movie_url"`
-	IsPaid   bool   `json:"is_paid"`
-}
-
 func movieListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	mm := []Movie{
-		Movie{0, "Бойцовский клуб", "/static/posters/fightclub.jpg", "https://youtu.be/qtRKdVHc-cE", true},
-		Movie{1, "Крестный отец", "/static/posters/father.jpg", "https://youtu.be/ar1SHxgeZUc", false},
-		Movie{2, "Криминальное чтиво", "/static/posters/pulpfiction.jpg", "https://youtu.be/s7EdQ4FqbhY", true},
-	}
+	mm, v := server.GetAllFilms()
 	err := json.NewEncoder(w).Encode(mm)
+	if v != nil {
+		log.Printf("Render response error: %v", v)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 	if err != nil {
 		log.Printf("Render response error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -40,24 +42,25 @@ func movieListHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// Обработчик для отображения содержимого заметки.
+// Обработчик для отображения содержимого.
 func movieListHandlerId(w http.ResponseWriter, r *http.Request) {
-	mm := []Movie{
-		Movie{0, "Бойцовский клуб", "/static/posters/fightclub.jpg", "https://youtu.be/qtRKdVHc-cE", true},
-		Movie{1, "Крестный отец", "/static/posters/father.jpg", "https://youtu.be/ar1SHxgeZUc", false},
-		Movie{2, "Криминальное чтиво", "/static/posters/pulpfiction.jpg", "https://youtu.be/s7EdQ4FqbhY", true},
+	mm, v := server.GetAllFilms()
+	if v != nil {
+		log.Printf("Render response error: %v", v)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 	// Извлекаем значение параметра id из URL и попытаемся
 	// конвертировать строку в integer используя функцию strconv.Atoi(). Если его нельзя
 	// конвертировать в integer, или значение меньше 0 или больше длины содержимого, возвращаем ответ
 	// 404 - страница не найдена!
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
-	if err != nil || id < 0 && id >= len(mm){
+
+	if err != nil || id < 0 {
 		http.NotFound(w, r)
 		return
 	}
 
 	// Используем функцию fmt.Fprintf() для вставки значения из id в строку ответа
 	// и записываем его в http.ResponseWriter.
-	fmt.Fprintf(w, "%v",mm[id])
+	fmt.Fprintf(w, "%v", mm[id])
 }
