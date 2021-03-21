@@ -49,13 +49,14 @@ func movieListHandlerId(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Render response error: %v", v)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+
 	// Извлекаем значение параметра id из URL и попытаемся
 	// конвертировать строку в integer используя функцию strconv.Atoi(). Если его нельзя
-	// конвертировать в integer, или значение меньше 0 или больше длины содержимого, возвращаем ответ
+	// конвертировать в integer, или значение меньше 0 или больше числа строк в БД, возвращаем ответ
 	// 404 - страница не найдена!
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
-
-	if err != nil || id < 0 {
+	lenDb := server.LenDb()
+	if err != nil || id < 0 || id > lenDb {
 		http.NotFound(w, r)
 		return
 	}

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"log"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -35,4 +37,17 @@ func GetAllFilms() (films []Movie, err error) {
 	query := `SELECT * FROM movie.films`
 	err = Db.Select(&films, query)
 	return
+}
+
+//функция, возвращающая число строк в БД -1
+func LenDb() int {
+	var count int
+	err := Db.QueryRow("SELECT COUNT(*) FROM movie.films").Scan(&count)
+	switch {
+	case err != nil:
+		log.Fatal(err)
+	default:
+		count = count - 1
+	}
+	return count
 }
